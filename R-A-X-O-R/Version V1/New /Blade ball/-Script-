@@ -4,8 +4,7 @@ local PhantomForcesWindow = Library:NewWindow("🪐RaXor Hud V1🪐")
 
 local KillingCheats = PhantomForcesWindow:NewSection("Combat")
 
-KillingCheats:CreateToggle("Auto ParryGod V1", function(value) 
-local Debug = false -- Set this to true if you want my debug output.
+KillingCheats:CreateToggle("Auto ParryGod V1", function(value) local Debug = false -- Set this to true if you want my debug output.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
@@ -54,7 +53,7 @@ Balls.ChildAdded:Connect(function(Ball)
             
             print(`Distance: {Distance}\nVelocity: {Velocity}\nTime: {Distance / Velocity}`)
         
-            if (Distance / Velocity) <= 11 then -- Sorry for the magic number. This just works. No, you don't get a slider for this because it's 2am.
+            if (Distance / Velocity) <= 10 then -- Sorry for the magic number. This just works. No, you don't get a slider for this because it's 2am.
                 Parry()
             end
         end
@@ -65,17 +64,6 @@ Balls.ChildAdded:Connect(function(Ball)
         end
     end)
 end)
-
- local function get_plr()
-  return game.Players.LocalPlayer
-end
-
-local function get_plrChar()
-  local plrChar = get_plr().Character
-  if plrChar then
-    return plrChar
-  end
-end
 
 local function get_plrRP()
   local plrRP = get_plrChar():FindFirstChild("HumanoidRootPart")
@@ -208,13 +196,13 @@ local function DetectSpam()
             local DistanceBall = (Ball.Position - plrRP.Position).Magnitude
             
             if get_PlayersNumber() < 3 then
-              if DistancePlayer <= 30 and DistanceBall <= 35 and SpamNum >= 4 then
+              if DistancePlayer <= 30 and DistanceBall <= 35 and SpamNum >= 2 then
                 getgenv().SpamClickA = true
               else
                 getgenv().SpamClickA = false
               end
             else
-              if DistancePlayer <= 30 and DistanceBall <= 35 and SpamNum >= 7 then
+              if DistancePlayer <= 30 and DistanceBall <= 35 and SpamNum >= 3 then
                 getgenv().SpamClickA = true
               else
                 getgenv().SpamClickA = false
@@ -237,8 +225,6 @@ end)
 
 KillingCheats:CreateToggle("Auto ParryGod V2", function(value) 
 loadstring(game:HttpGet("https://pastebin.com/raw/t2391h1A"))()
-
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Hosvile/Refinement/main/M%3ABlade%20Ball%20Mechanism",true))()
 print(value)
 end)
 
